@@ -1634,12 +1634,18 @@ static BOOL done_editing;
 	  [[editField currentEditor] mouseDragged: e];
 	  break;
 	case NSKeyDown:
-	  [[editField currentEditor] keyDown: e];
-	  break;
+          if ([e modifierFlags])
+            [NSApp sendEvent:e];
+          else
+            [[editField currentEditor] keyDown:e];
+          break;
 	case NSKeyUp:
-	  [[editField currentEditor] keyUp: e];
-	  break;
-	case NSFlagsChanged:
+          if ([e modifierFlags])
+            [NSApp sendEvent:e];
+          else
+            [[editField currentEditor] keyUp:e];
+          break;
+        case NSFlagsChanged:
 	  [[editField currentEditor] flagsChanged: e];
 	  break;
 	default:
