@@ -1,0 +1,20 @@
+{
+    "## Comment" = "Do NOT change this file, Gorm maintains it";
+    FirstResponder = {
+	Actions = (
+	    "showInfoPanel:",
+	    "showInfoWindow:"
+	);
+	Super = NSObject;
+    };
+    GormAppDelegate = {
+	Actions = (
+	);
+	Outlets = (
+	    infoPanel,
+	    versionField,
+	    versionShadowField
+	);
+	Super = NSObject;
+    };
+}

@@ -42,8 +42,12 @@
 
 @interface GormAppDelegate : GormAbstractDelegate <NSOpenSavePanelDelegate>
 {
-  @private
-    GormLanguageViewController *_vc;
+  IBOutlet NSPanel *infoPanel;
+  IBOutlet NSTextField *versionField;
+  IBOutlet NSTextField *versionShadowField;
+  IBOutlet NSTextField *copyrightField;
+@private
+  GormLanguageViewController *_vc;
 }
 
 // preferences

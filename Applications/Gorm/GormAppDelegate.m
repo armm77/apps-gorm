@@ -395,6 +395,32 @@
   [[_preferencesController panel] makeKeyAndOrderFront:nil];
 }
 
+- (IBAction)infoPanel:(id)sender {
+  NSDictionary *infoDict;
+  NSString *file, *versionInfo, *version;
+
+  if (!infoPanel) {
+    if (![NSBundle loadNibNamed:@"InfoPanel" owner:self]) {
+      NSLog(@"Failed to load InfoPanel.gorm");
+      return;
+    }
+
+    file = [[NSBundle mainBundle] pathForResource:@"GormInfo" ofType:@"plist"];
+    infoDict = [NSDictionary dictionaryWithContentsOfFile:file];
+
+    if ((versionInfo = [infoDict objectForKey:@"ApplicationRelease"])) {
+      version = [NSString stringWithFormat:@"Version %@", versionInfo];
+      [versionField setStringValue:version];
+      [versionShadowField setStringValue:version];
+      // [copyrightField setStringValue:[infoDict objectForKey:@"Copyright"]];
+    }
+    //
+    [infoPanel center];
+  }
+
+  [infoPanel makeKeyAndOrderFront:nil];
+}
+
 /** Document Menu Actions */
 - (IBAction) close: (id)sender
 {
