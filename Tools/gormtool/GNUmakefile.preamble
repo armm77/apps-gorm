@@ -28,7 +28,9 @@ ADDITIONAL_TOOL_LIBS += \
 	-lInterfaceBuilder \
 	-lGormObjCHeaderParser \
 	-lgnustep-base \
-	-lgnustep-gui
+	-lgnustep-gui \
+	-lDesktopKit \
+	-lSystemKit
 
 ADDITIONAL_INCLUDE_DIRS += \
 	-I../../
