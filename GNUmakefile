@@ -41,6 +41,8 @@ ifeq ($(GNUSTEP_MAKEFILES),)
   $(error You need to set GNUSTEP_MAKEFILES before compiling!)
 endif
 
+GNUSTEP_INSTALLATION_DOMAIN = NETWORK
+
 VERSION = 1.4.0
 PACKAGE_NAME = gorm
 export PACKAGE_NAME

@@ -35,6 +35,9 @@
 
 #import <GNUstepGUI/GSGormLoading.h>
 
+#import <DesktopKit/NXTTabView.h>
+#import <DesktopKit/NXTTabViewItem.h>
+
 #import "GormPrivate.h"
 #import "GormClassManager.h"
 #import "GormCustomView.h"
@@ -302,7 +305,7 @@ static NSImage  *fileImage = nil;
  */
 - (void) awakeFromNib
 {
-  NSRect                scrollRect = {{0, 0}, {340, 188}};
+  NSRect                scrollRect = {{10, 0}, {340, 188}};
   NSRect                mainRect = {{20, 0}, {320, 188}};
   NSNotificationCenter	*nc = [NSNotificationCenter defaultCenter];
   NSMenu                *mainMenu = nil;
@@ -316,13 +319,13 @@ static NSImage  *fileImage = nil;
   [window setDocument: self];
   
   // set up the toolbar...
-  toolbar = [(NSToolbar *)[NSToolbar alloc] initWithIdentifier: @"GormToolbar"];
-  [toolbar setAllowsUserCustomization: NO];
-  // [toolbar setSizeMode: NSToolbarSizeModeSmall];
-  [toolbar setDelegate: self];
-  [window setToolbar: toolbar];
-  RELEASE(toolbar);
-  [toolbar setSelectedItemIdentifier: @"ObjectsItem"]; // set initial selection.
+//   toolbar = [(NSToolbar *)[NSToolbar alloc] initWithIdentifier: @"GormToolbar"];
+//   [toolbar setAllowsUserCustomization: NO];
+//   // [toolbar setSizeMode: NSToolbarSizeModeSmall];
+//   [toolbar setDelegate: self];
+//   [window setToolbar: toolbar];
+//   RELEASE(toolbar);
+//   [toolbar setSelectedItemIdentifier:@"ObjectsItem"]; // set initial selection.
 
   // set up notifications for window.
   [nc addObserver: self
@@ -342,38 +345,61 @@ static NSImage  *fileImage = nil;
       name: NSWindowDidDeminiaturizeNotification
       object: window];
 
+  NSRect contentRect = [[window contentView] frame];
+  contentRect.origin.x = -1;
+  contentRect.origin.y = -2;
+  contentRect.size.width += 3;
+  contentRect.size.height += 4;
+  NXTTabView *tabView = [[NXTTabView alloc] initWithFrame:contentRect];
+  tabView.unselectedBackgroundColor = [NSColor grayColor];
+  tabView.selectedBackgroundColor = [NSColor lightGrayColor];
+  [tabView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+  [tabView setDelegate:self];
+
+  NXTTabViewItem *item;
+
   // objects...
-  mainRect.origin = NSMakePoint(0,0);
+  mainRect.origin = NSMakePoint(0, 0);
+  scrollRect.size.height = contentRect.size.height - 32;
+  scrollRect.size.width = contentRect.size.width - 20;
   scrollView = [[NSScrollView alloc] initWithFrame: scrollRect];
   [scrollView setHasVerticalScroller: YES];
   [scrollView setHasHorizontalScroller: YES];
-  [scrollView setAutoresizingMask:
-		NSViewHeightSizable|NSViewWidthSizable];
-  [scrollView setBorderType: NSBezelBorder];
+  [scrollView setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
+  [scrollView setBorderType:NSBezelBorder];
   
   objectsView = [[GormObjectEditor alloc] initWithObject: nil
 					  inDocument: self];
   [objectsView setFrame: mainRect];
-  [objectsView setAutoresizingMask:
-		 NSViewHeightSizable|NSViewWidthSizable];
+  [objectsView setAutoresizingMask: NSViewHeightSizable | NSViewWidthSizable];
+  [scrollView setBackgroundColor: [objectsView backgroundColor]];
   [scrollView setDocumentView: objectsView];
-  RELEASE(objectsView); 
+  RELEASE(objectsView);
+  //
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ObjectsItem"];
+  item.label = @"Instances";
+  [item setView:scrollView];
+  [tabView addTabViewItem:item];
   
   // images...
   mainRect.origin = NSMakePoint(0,0);
   imagesScrollView = [[NSScrollView alloc] initWithFrame: scrollRect];
   [imagesScrollView setHasVerticalScroller: YES];
   [imagesScrollView setHasHorizontalScroller: YES];
-  [imagesScrollView setAutoresizingMask:
-		      NSViewHeightSizable|NSViewWidthSizable];
+  [imagesScrollView
+    setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
   [imagesScrollView setBorderType: NSBezelBorder];
   
   imagesView = [[GormImageEditor alloc] initWithObject: nil
 					inDocument: self];
   [imagesView setFrame: mainRect];
-  [imagesView setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
+  [imagesView setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
   [imagesScrollView setDocumentView: imagesView];
   RELEASE(imagesView);
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ImagesItem"];
+  item.label = @"Images";
+  [item setView:imagesScrollView];
+  [tabView addTabViewItem:item];
   
   // sounds...
   mainRect.origin = NSMakePoint(0,0);
@@ -390,16 +416,26 @@ static NSImage  *fileImage = nil;
   [soundsView setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
   [soundsScrollView setDocumentView: soundsView];
   RELEASE(soundsView);
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"2"];
+  item.label = @"Sounds";
+  [item setView:soundsScrollView];
+  [tabView addTabViewItem:item];
   
   /* classes view */
-  mainRect.origin = NSMakePoint(0,0);
+//   mainRect.origin = NSMakePoint(8,0);
   classesView = [(GormClassEditor *)[GormClassEditor alloc] initWithDocument: self];
-  // [classesView setFrame: mainRect];
+  [classesView setFrame: scrollRect];
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ClassesItem"];
+  item.label = @"Classes";
+  [item setView:classesView];
+  [tabView addTabViewItem:item];
+
+  [[window contentView] addSubview:tabView];
   
   /*
    * Set the objects view as the initial view the user's see on startup.
    */
-  [selectionBox setContentView: scrollView];
+//   [selectionBox setContentView: scrollView];
 
   // add to the objects view...
   [objectsView addObject: filesOwner];
@@ -470,6 +506,10 @@ static NSImage  *fileImage = nil;
   // Retain the file prefs view...
   //
   RETAIN(filePrefsView);
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"FileItem"];
+  item.label = @"File";
+  [item setView:filePrefsView];
+  [tabView addTabViewItem:item];
 
   //
   // All of the entries in the items array are "top level items" 
@@ -928,8 +968,55 @@ static NSImage  *fileImage = nil;
     }
 }
 
+- (void)tabView:(NSTabView *)tabView
+  didSelectTabViewItem:(NSTabViewItem *)tabViewItem
+{
+  NSLog(@"TabView selects item: %li", [[tabViewItem identifier] integerValue]);
+  switch ([[tabViewItem identifier] integerValue])
+    {
+    case 0: // objects
+      {
+      if (![[NSApp delegate] isConnecting])
+	[self setSelectionFromEditor:objectsView];
+      }
+      break;
+    case 1: // images
+      {
+      [self setSelectionFromEditor:imagesView];
+      }
+      break;
+    case 2: // sounds
+      {
+	[self setSelectionFromEditor: soundsView];
+      }
+      break;
+    case 3: // classes
+      {
+	NSArray *selection =  [[(id<IB>)[NSApp delegate] selectionOwner] selection];
+	
+	// if something is selected, in the object view.
+	// show the equivalent class in the classes view.
+	if ([selection count] > 0)
+	  {
+	    id obj = [selection objectAtIndex: 0];
+	    [classesView selectClassWithObject: obj];
+	  }
+	[self setSelectionFromEditor: classesView];
+      }
+      break;
+    case 4: // file prefs
+      {
+	[toolbar setSelectedItemIdentifier: @"FileItem"];
+	[selectionBox setContentView: filePrefsView];
+      }
+      break;
+    }
+}
+
 - (void) changeToViewWithTag: (int)tag
 {
+  return;
+
   switch (tag)
     {
     case 0: // objects
