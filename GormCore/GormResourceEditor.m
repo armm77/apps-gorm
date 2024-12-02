@@ -31,28 +31,28 @@
 #include "GormPalettesManager.h"
 #include "GormResource.h"
 
-@interface NSMatrix (GormResourceEditorPrivate)
-- (BOOL **) _selectedCells;
-- (id **) _cells;
-- (void) _setSelectedCell: (id)c;
-@end
+// @interface NSMatrix (GormResourceEditorPrivate)
+// - (BOOL **) _selectedCells;
+// - (id **) _cells;
+// - (void) _setSelectedCell: (id)c;
+// @end
 
-@implementation NSMatrix (GormResourceEditorPrivate)
-- (BOOL **) _selectedCells
-{
-  return _selectedCells;
-}
+// @implementation NSMatrix (GormResourceEditorPrivate)
+// - (BOOL **) _selectedCells
+// {
+//   return _selectedCells;
+// }
 
-- (id **) _cells
-{
-  return _cells;
-}
+// - (id **) _cells
+// {
+//   return _cells;
+// }
 
-- (void) _setSelectedCell: (id)c
-{
-  _selectedCell = c;
-}
-@end
+// - (void) _setSelectedCell: (id)c
+// {
+//   _selectedCell = c;
+// }
+// @end
 
 @implementation	GormResourceEditor
 
@@ -78,7 +78,7 @@
 {
 }
 
-- (unsigned int) draggingSourceOperationMaskForLocal: (BOOL)flag
+- (NSDragOperation) draggingSourceOperationMaskForLocal: (BOOL)flag
 {
   return NSDragOperationCopy;
 }
@@ -120,13 +120,7 @@
 {
   if ((self = [super initWithObject: anObject inDocument: aDocument]) != nil)
     {
-      NSButtonCell	*proto;
-
-      [self setAutosizesCells: NO];
-      [self setCellSize: NSMakeSize(72,72)];
-      [self setIntercellSpacing: NSMakeSize(8,8)];
       [self setAutoresizingMask: NSViewMinYMargin|NSViewWidthSizable];
-      [self setMode: NSRadioModeMatrix];
       /*
        * Send mouse click actions to self, so we can handle selection.
        */
@@ -134,31 +128,15 @@
       [self setDoubleAction: @selector(raiseSelection:)];
       [self setTarget: self];
 
-      objects = [[NSMutableArray alloc] init];
-      proto = [[NSButtonCell alloc] init];
-      [proto setBordered: NO];
-      [proto setAlignment: NSCenterTextAlignment];
-      [proto setImagePosition: NSImageAbove];
-      [proto setSelectable: NO];
-      [proto setEditable: NO];
-      [self setPrototype: proto];
-      RELEASE(proto);
-
-      // do not insert it if it's nil.
-      if(anObject != nil)
-	{
-	  [self addObject: anObject];
-	}
-
       // add any initial objects
       [self addSystemResources];
 
       // set up the notification...
       [[NSNotificationCenter defaultCenter]
-	addObserver: self
-	selector: @selector(handleNotification:)
-	name: GormResizeCellNotification
-	object: nil];
+	addObserver:self
+	   selector:@selector(handleNotification:)
+	       name:GormResizeCellNotification
+	     object:nil];
     }
   return self;
 }
@@ -212,119 +190,92 @@
 
 - (void) mouseDown: (NSEvent*)theEvent
 {
+  NSLog(@"GormResourceEditor: mouseDown:");
   NSInteger row, column;
   NSInteger newRow, newColumn;
-  unsigned eventMask = NSLeftMouseUpMask | NSLeftMouseDownMask
-			| NSMouseMovedMask | NSLeftMouseDraggedMask
-			| NSPeriodicMask;
-  NSPoint lastLocation = [theEvent locationInWindow];
-  NSEvent* lastEvent = theEvent;
-  NSPoint initialLocation;
-  BOOL **selectedCells = [self _selectedCells];
-  id selectedCell = [self selectedCell];
+  unsigned  eventMask = NSLeftMouseUpMask | NSLeftMouseDownMask
+		       | NSMouseMovedMask | NSLeftMouseDraggedMask
+		       | NSPeriodicMask;
+  NSPoint  lastLocation = [theEvent locationInWindow];
+  NSEvent *lastEvent = theEvent;
+  NSPoint  initialLocation;
+  //   BOOL **selectedCells = [self _selectedCells];
+  //   id selectedCell = [self selectedCell];
   
   /*
    * Pathological case -- ignore mouse down
    */
   if ((_numRows == 0) || (_numCols == 0))
     {
-      [super mouseDown: theEvent];
-      return; 
+      [super mouseDown:theEvent];
+      return;
     }
 
-  lastLocation = [self convertPoint: lastLocation
-		       fromView: nil];
+  lastLocation = [self convertPoint:lastLocation fromView:nil];
   initialLocation = lastLocation;
-  // If mouse down was on a selectable cell, start editing/selecting.
-  if ([self getRow: &row
-	    column: &column
-	    forPoint: lastLocation])
+  //   If mouse down was on a selectable cell, start editing/selecting.
+  if ([self getRow:&row column:&column forPoint:lastLocation] != NO)
     {
       if ([_cells[row][column] isEnabled])
 	{
-	  if ((_mode == NSRadioModeMatrix) && _selectedCell != nil)
-	    {
-	      [selectedCell setState: NSOffState];
-	      [self drawCellAtRow: _selectedRow column: _selectedColumn];
-	      selectedCells[_selectedRow][_selectedColumn] = NO;
-	      selectedCell = nil;
-	      _selectedRow = _selectedColumn = -1;
-	    }
-	  [_cells[row][column] setState: NSOnState];
-	  [self drawCellAtRow: row column: column];
-	  [_window flushWindow];
-	  selectedCells[row][column] = YES;
-	  [self _setSelectedCell: _cells[row][column]];
-	  _selectedRow = row;
-	  _selectedColumn = column;
+	  [self selectCell:_cells[row][column]];
 	}
     }
   else
     {
       return;
     }
-  
-  lastEvent = [NSApp nextEventMatchingMask: eventMask
-		     untilDate: [NSDate distantFuture]
-		     inMode: NSEventTrackingRunLoopMode
-		     dequeue: YES];
-  
-  lastLocation = [self convertPoint: [lastEvent locationInWindow]
-		       fromView: nil];
 
+  lastEvent = [NSApp nextEventMatchingMask:eventMask
+				 untilDate:[NSDate distantFuture]
+				    inMode:NSEventTrackingRunLoopMode
+				   dequeue:YES];
+
+  lastLocation = [self convertPoint:[lastEvent locationInWindow] fromView:nil];
 
   while ([lastEvent type] != NSLeftMouseUp)
     {
-      if((![self getRow: &newRow
-		 column: &newColumn
-		 forPoint: lastLocation])
-	 ||
-	 (row != newRow)
-	 ||
-	 (column != newColumn)
-	 ||
-	 ((lastLocation.x - initialLocation.x) * 
-	  (lastLocation.x - initialLocation.x) +
-	  (lastLocation.y - initialLocation.y) * 
-	  (lastLocation.y - initialLocation.y)
-	  >= 25))
+      if ((![self getRow:&newRow column:&newColumn forPoint:lastLocation])
+	  || (row != newRow) || (column != newColumn)
+	  || ((lastLocation.x - initialLocation.x)
+		  * (lastLocation.x - initialLocation.x)
+		+ (lastLocation.y - initialLocation.y)
+		    * (lastLocation.y - initialLocation.y)
+	      >= 25))
 	{
-  	  NSPasteboard	*pb;
-	  NSInteger pos;
+	  NSPasteboard *pb;
+	  NSInteger	pos;
 	  pos = row * [self numberOfColumns] + column;
 
 	  // don't allow the user to drag empty resources.
-	  if(pos < [objects count])
+	  if (pos < [objects count])
 	    {
-	      pb = [NSPasteboard pasteboardWithName: NSDragPboard];
-	      [pb declareTypes: [self pbTypes]
-		  owner: self];
-	      [pb setString: [(GormResource *)[objects objectAtIndex: pos] name] 
-		  forType: [[self pbTypes] objectAtIndex: 0]];
-	      [self dragImage: [[objects objectAtIndex: pos] imageForViewer]
-		    at: lastLocation
-		    offset: NSZeroSize
-  		    event: theEvent
-		    pasteboard: pb
-		    source: self
-		    slideBack: YES];
+	      pb = [NSPasteboard pasteboardWithName:NSDragPboard];
+	      [pb declareTypes:[self pbTypes] owner:self];
+	      [pb setString:[(GormResource *) [objects objectAtIndex:pos] name]
+		    forType:[[self pbTypes] objectAtIndex:0]];
+	      [self dragImage:[[objects objectAtIndex:pos] imageForViewer]
+			   at:lastLocation
+		       offset:NSZeroSize
+			event:theEvent
+		   pasteboard:pb
+		       source:self
+		    slideBack:YES];
 	    }
 
 	  return;
 	}
 
-      lastEvent = [NSApp nextEventMatchingMask: eventMask
-			 untilDate: [NSDate distantFuture]
-			 inMode: NSEventTrackingRunLoopMode
-			 dequeue: YES];
-      
-      lastLocation = [self convertPoint: [lastEvent locationInWindow]
-			   fromView: nil];
+      lastEvent = [NSApp nextEventMatchingMask:eventMask
+				     untilDate:[NSDate distantFuture]
+					inMode:NSEventTrackingRunLoopMode
+				       dequeue:YES];
 
+      lastLocation = [self convertPoint:[lastEvent locationInWindow]
+			       fromView:nil];
     }
 
-  [self changeSelection: self];
-
+  [self changeSelection:self];
 }
 
 - (void) pasteInSelection
@@ -360,63 +311,6 @@
   [e orderFront];
   [e resetObject: obj];
   return self;
-}
-
-- (void) refreshCells
-{
-  unsigned	count = [objects count];
-  unsigned	index;
-  int		cols = 0;
-  int		rows;
-  int		width;
-
-  // return if the superview is not available.
-  if(![self superview])
-    {
-      return;
-    }
-
-  width = [[self superview] bounds].size.width;
-  while (width >= 72)
-    {
-      width -= (72 + 8);
-      cols++;
-    }
-  if (cols == 0)
-    {
-      cols = 1;
-    }
-  rows = count / cols;
-  if (rows == 0 || rows * cols != count)
-    {
-      rows++;
-    }
-  [self renewRows: rows columns: cols];
-
-  for (index = 0; index < count; index++)
-    {
-      id		obj = [objects objectAtIndex: index];
-      NSButtonCell	*but = [self cellAtRow: index/cols column: index%cols];
-      NSString          *name = [(GormResource *)obj name];
-
-      [but setImage: [obj imageForViewer]];
-      [but setTitle: name];
-      [but setShowsStateBy: NSChangeGrayCellMask];
-      [but setHighlightsBy: NSChangeGrayCellMask];
-    }
-  while (index < rows * cols)
-    {
-      NSButtonCell	*but = [self cellAtRow: index/cols column: index%cols];
-
-      [but setImage: nil];
-      [but setTitle: @""];
-      [but setShowsStateBy: NSNoCellMask];
-      [but setHighlightsBy: NSNoCellMask];
-      index++;
-    }
-  [self setIntercellSpacing: NSMakeSize(8,8)];
-  [self sizeToCells];
-  [self setNeedsDisplay: YES];
 }
 
 @end

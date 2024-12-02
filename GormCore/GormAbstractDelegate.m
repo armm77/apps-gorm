@@ -299,15 +299,14 @@
 			      and: (id)destination
 {
   NSWindow	*window;
-  NSRect	rect;
-
+  NSRect	 rect;
+  GormDocument	*document = (GormDocument *) [self activeDocument];
 
   if (source != _connectSource)
     {
       if (_connectSource != nil)
 	{
-	  window = [(GormDocument *)[self activeDocument] windowAndRect: &rect
-				    forObject: _connectSource];
+	  window = [document windowAndRect:&rect forObject:_connectSource];
 	  if (window != nil)
 	    {
 	      NSView	*view = [[window contentView] superview];
@@ -330,8 +329,7 @@
     {
       if (_connectDestination != nil)
 	{
-	  window = [(GormDocument *)[self activeDocument] windowAndRect: &rect
-				    forObject: _connectDestination];
+	  window = [document windowAndRect:&rect forObject:_connectDestination];
 	  if (window != nil)
 	    {
 	      NSView	*view = [[window contentView] superview];
@@ -353,7 +351,7 @@
     }
   if (_connectSource != nil)
     {
-      window = [(GormDocument *)[self activeDocument] windowAndRect: &rect forObject: _connectSource];
+      window = [document windowAndRect:&rect forObject:_connectSource];
       if (window != nil)
 	{
 	  NSView	*view = [[window contentView] superview];
@@ -364,7 +362,7 @@
 	  //rect.size.height--;
 	  [view lockFocus];
 	  [[NSColor greenColor] set];
-	  NSFrameRectWithWidth(rect, 1);
+	  NSFrameRectWithWidth(rect, 1.5);
 
 	  [_sourceImage compositeToPoint: imageRect.origin
 			       operation: NSCompositeSourceOver];
@@ -374,8 +372,7 @@
     }
   if (_connectDestination != nil && _connectDestination == _connectSource)
     {
-      window = [(GormDocument *)[self activeDocument] windowAndRect: &rect
-				forObject: _connectDestination];
+      window = [document windowAndRect:&rect forObject:_connectDestination];
       if (window != nil)
 	{
 	  NSView	*view = [[window contentView] superview];
@@ -387,7 +384,7 @@
 	  // rect.size.height -= 5;
 	  [view lockFocus];
 	  [[NSColor purpleColor] set];
-	  NSFrameRectWithWidth(rect, 1);
+	  NSFrameRectWithWidth(rect, 1.5);
 
 	  imageRect.origin.x += [_targetImage size].width;
 	  [_targetImage compositeToPoint: imageRect.origin
@@ -398,8 +395,7 @@
     }
   else if (_connectDestination != nil)
     {
-      window = [(GormDocument *)[self activeDocument] windowAndRect: &rect
-				forObject: _connectDestination];
+      window = [document windowAndRect:&rect forObject:_connectDestination];
       if (window != nil)
 	{
 	  NSView	*view = [[window contentView] superview];
@@ -410,7 +406,7 @@
 	  // rect.size.height--;
 	  [view lockFocus];
 	  [[NSColor purpleColor] set];
-	  NSFrameRectWithWidth(rect, 1);
+	  NSFrameRectWithWidth(rect, 1.5);
 
 	  [_targetImage compositeToPoint: imageRect.origin
 			       operation: NSCompositeSourceOver];

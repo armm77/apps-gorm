@@ -28,6 +28,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111 USA.
  */
 
+#include "GormCore/GormResource.h"
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
@@ -314,36 +315,26 @@ static NSImage  *fileImage = nil;
 
   // get the window and cache it...
   window = (GormDocumentWindow *)[self _docWindow];
-  [IBResourceManager registerForAllPboardTypes:window
-	  			inDocument:self];
+  [IBResourceManager registerForAllPboardTypes:window inDocument:self];
   [window setDocument: self];
   
-  // set up the toolbar...
-//   toolbar = [(NSToolbar *)[NSToolbar alloc] initWithIdentifier: @"GormToolbar"];
-//   [toolbar setAllowsUserCustomization: NO];
-//   // [toolbar setSizeMode: NSToolbarSizeModeSmall];
-//   [toolbar setDelegate: self];
-//   [window setToolbar: toolbar];
-//   RELEASE(toolbar);
-//   [toolbar setSelectedItemIdentifier:@"ObjectsItem"]; // set initial selection.
-
   // set up notifications for window.
-  [nc addObserver: self
-      selector: @selector(handleNotification:)
-      name: NSWindowWillCloseNotification
-      object: window];
-  [nc addObserver: self
-      selector: @selector(handleNotification:)
-      name: NSWindowDidBecomeKeyNotification
-      object: window];
-  [nc addObserver: self
-      selector: @selector(handleNotification:)
-      name: NSWindowWillMiniaturizeNotification
-      object: window];
-  [nc addObserver: self
-      selector: @selector(handleNotification:)
-      name: NSWindowDidDeminiaturizeNotification
-      object: window];
+  [nc addObserver:self
+	 selector:@selector(handleNotification:)
+	     name:NSWindowWillCloseNotification
+	   object:window];
+  [nc addObserver:self
+	 selector:@selector(handleNotification:)
+	     name:NSWindowDidBecomeKeyNotification
+	   object:window];
+  [nc addObserver:self
+	 selector:@selector(handleNotification:)
+	     name:NSWindowWillMiniaturizeNotification
+	   object:window];
+  [nc addObserver:self
+	 selector:@selector(handleNotification:)
+	     name:NSWindowDidDeminiaturizeNotification
+	   object:window];
 
   NSRect contentRect = [[window contentView] frame];
   contentRect.origin.x = -1;
@@ -364,7 +355,7 @@ static NSImage  *fileImage = nil;
   scrollRect.size.width = contentRect.size.width - 20;
   scrollView = [[NSScrollView alloc] initWithFrame: scrollRect];
   [scrollView setHasVerticalScroller: YES];
-  [scrollView setHasHorizontalScroller: YES];
+  [scrollView setHasHorizontalScroller: NO];
   [scrollView setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
   [scrollView setBorderType:NSBezelBorder];
   
@@ -376,27 +367,37 @@ static NSImage  *fileImage = nil;
   [scrollView setDocumentView: objectsView];
   RELEASE(objectsView);
   //
-  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ObjectsItem"];
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"0"];
   item.label = @"Instances";
   [item setView:scrollView];
+  [tabView addTabViewItem:item];
+
+    /* classes view */
+  classesView = [(GormClassEditor *)[GormClassEditor alloc] initWithDocument: self];
+  [classesView setFrame:scrollRect];
+  //
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"1"];
+  item.label = @"Classes";
+  [item setView:classesView];
   [tabView addTabViewItem:item];
   
   // images...
   mainRect.origin = NSMakePoint(0,0);
   imagesScrollView = [[NSScrollView alloc] initWithFrame: scrollRect];
   [imagesScrollView setHasVerticalScroller: YES];
-  [imagesScrollView setHasHorizontalScroller: YES];
+  [imagesScrollView setHasHorizontalScroller: NO];
   [imagesScrollView
     setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
   [imagesScrollView setBorderType: NSBezelBorder];
-  
-  imagesView = [[GormImageEditor alloc] initWithObject: nil
-					inDocument: self];
+
+  imagesView = [[GormImageEditor alloc] initWithObject:nil inDocument:self];
   [imagesView setFrame: mainRect];
   [imagesView setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
   [imagesScrollView setDocumentView: imagesView];
+  [imagesView refreshCells];
   RELEASE(imagesView);
-  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ImagesItem"];
+  //
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"2"];
   item.label = @"Images";
   [item setView:imagesScrollView];
   [tabView addTabViewItem:item];
@@ -405,7 +406,7 @@ static NSImage  *fileImage = nil;
   mainRect.origin = NSMakePoint(0,0);
   soundsScrollView = [[NSScrollView alloc] initWithFrame: scrollRect];
   [soundsScrollView setHasVerticalScroller: YES];
-  [soundsScrollView setHasHorizontalScroller: YES];
+  [soundsScrollView setHasHorizontalScroller: NO];
   [soundsScrollView setAutoresizingMask:
 		      NSViewHeightSizable|NSViewWidthSizable];
   [soundsScrollView setBorderType: NSBezelBorder];
@@ -414,29 +415,17 @@ static NSImage  *fileImage = nil;
 					inDocument: self];
   [soundsView setFrame: mainRect];
   [soundsView setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
-  [soundsScrollView setDocumentView: soundsView];
+  [soundsScrollView setDocumentView:soundsView];
+  [soundsView refreshCells];
   RELEASE(soundsView);
-  item = [[NXTTabViewItem alloc] initWithIdentifier:@"2"];
+  //
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"3"];
   item.label = @"Sounds";
   [item setView:soundsScrollView];
   [tabView addTabViewItem:item];
   
-  /* classes view */
-//   mainRect.origin = NSMakePoint(8,0);
-  classesView = [(GormClassEditor *)[GormClassEditor alloc] initWithDocument: self];
-  [classesView setFrame: scrollRect];
-  item = [[NXTTabViewItem alloc] initWithIdentifier:@"ClassesItem"];
-  item.label = @"Classes";
-  [item setView:classesView];
-  [tabView addTabViewItem:item];
-
   [[window contentView] addSubview:tabView];
   
-  /*
-   * Set the objects view as the initial view the user's see on startup.
-   */
-//   [selectionBox setContentView: scrollView];
-
   // add to the objects view...
   [objectsView addObject: filesOwner];
   [objectsView addObject: firstResponder];
@@ -454,8 +443,9 @@ static NSImage  *fileImage = nil;
       NSRect frame = [window frame];
       NSPoint origin = frame.origin;
       NSRect screen = [[NSScreen mainScreen] frame];
-      
+
       // account for the height of the menu we're loading.
+      origin.x = 100;
       origin.y = (screen.size.height - 100);
       
       // place the main menu appropriately...
@@ -506,8 +496,9 @@ static NSImage  *fileImage = nil;
   // Retain the file prefs view...
   //
   RETAIN(filePrefsView);
-  item = [[NXTTabViewItem alloc] initWithIdentifier:@"FileItem"];
+  item = [[NXTTabViewItem alloc] initWithIdentifier:@"4"];
   item.label = @"File";
+  [filePrefsView setFrame:scrollRect];
   [item setView:filePrefsView];
   [tabView addTabViewItem:item];
 
@@ -522,7 +513,7 @@ static NSImage  *fileImage = nil;
     }
 
   // set the file type in the prefs manager...
-  [filePrefsManager setFileTypeName: [self fileType]];  
+  [filePrefsManager setFileTypeName: [self fileType]];
 }
 
 /**
@@ -968,29 +959,18 @@ static NSImage  *fileImage = nil;
     }
 }
 
-- (void)tabView:(NSTabView *)tabView
-  didSelectTabViewItem:(NSTabViewItem *)tabViewItem
+- (void)tabView:(NSTabView *)view didSelectTabViewItem:(NSTabViewItem *)item
 {
-  NSLog(@"TabView selects item: %li", [[tabViewItem identifier] integerValue]);
-  switch ([[tabViewItem identifier] integerValue])
+  NSLog(@"TabView selects item: %li", [[item identifier] integerValue]);
+  switch ([[item identifier] integerValue])
     {
     case 0: // objects
-      {
       if (![[NSApp delegate] isConnecting])
-	[self setSelectionFromEditor:objectsView];
-      }
+	{
+	  [self setSelectionFromEditor:objectsView];
+	}
       break;
-    case 1: // images
-      {
-      [self setSelectionFromEditor:imagesView];
-      }
-      break;
-    case 2: // sounds
-      {
-	[self setSelectionFromEditor: soundsView];
-      }
-      break;
-    case 3: // classes
+      case 1: // classes
       {
 	NSArray *selection =  [[(id<IB>)[NSApp delegate] selectionOwner] selection];
 	
@@ -1001,14 +981,17 @@ static NSImage  *fileImage = nil;
 	    id obj = [selection objectAtIndex: 0];
 	    [classesView selectClassWithObject: obj];
 	  }
-	[self setSelectionFromEditor: classesView];
+	[self setSelectionFromEditor:classesView];
       }
       break;
+    case 2: // sounds
+      [self setSelectionFromEditor:soundsView];
+      break;
+    case 3: // images
+      [self setSelectionFromEditor:imagesView];
+      break;
     case 4: // file prefs
-      {
-	[toolbar setSelectedItemIdentifier: @"FileItem"];
-	[selectionBox setContentView: filePrefsView];
-      }
+      [self setSelectionFromEditor:filePrefsView];
       break;
     }
 }
@@ -2029,7 +2012,26 @@ static void _real_close(GormDocument *self,
  */
 - (NSString*) nameForObject: (id)anObject
 {
-  return (NSString*)NSMapGet(objToName, (void*)anObject);
+  NSString *name = @"";
+
+  // Images and sounds
+  if ([anObject isKindOfClass:[GormResource class]])
+    {
+      name = [(GormResource *)anObject name];
+    }
+  else
+    {
+      name = (NSString *) NSMapGet(objToName, (void *) anObject);
+//       if ([name isEqualToString:@"NSOwner"])
+// 	{
+// 	  name = @"File's Owner";
+// 	}
+//       else if ([name isEqualToString:@"NSFirst"])
+// 	{
+// 	  name = @"First Responder";
+// 	}
+    }
+  return name;
 }
 
 /**
@@ -2037,7 +2039,15 @@ static void _real_close(GormDocument *self,
  */
 - (id) objectForName: (NSString*)name
 {
-  return [nameTable objectForKey: name];
+//   if ([name isEqualToString:@"File's Owner"])
+//     {
+//       name = @"NSOwner";
+//     }
+//   else if ([name isEqualToString:@"First Responder"])
+//     {
+//       name = @"NSFirst";
+//     }
+  return [nameTable objectForKey:name];
 }
 
 /**

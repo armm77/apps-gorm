@@ -26,12 +26,12 @@
 #ifndef INCLUDED_GormGenericEditor_h
 #define INCLUDED_GormGenericEditor_h
 
-#include <Foundation/Foundation.h>
+// #include <Foundation/Foundation.h>
 #include <AppKit/AppKit.h>
 
 #include <InterfaceBuilder/InterfaceBuilder.h>
 
-@interface	GormGenericEditor : NSMatrix <IBEditors, IBSelectionOwners>
+@interface GormGenericEditor : NSMatrix <IBEditors, IBSelectionOwners>
 {
   NSMutableArray	*objects;
   id<IBDocuments>	document;
@@ -44,53 +44,52 @@
 }
 
 // class methods...
-+ (id) editorForDocument: (id<IBDocuments>)aDocument;
-+ (void) setEditor: (id)editor
-       forDocument: (id<IBDocuments>)aDocument; 
++ (id)editorForDocument:(id<IBDocuments>)aDocument;
++ (void)setEditor:(id)editor forDocument:(id<IBDocuments>)aDocument;
 
 // selection methods...
-- (void) selectObjects: (NSArray*)objects;
-- (BOOL) wantsSelection;
-- (void) copySelection;
-- (void) deleteSelection;
-- (void) pasteInSelection;
-- (void) refreshCells;
-- (void) closeSubeditors;
+- (void)selectObjects:(NSArray *)objects;
+- (BOOL)wantsSelection;
+- (void)copySelection;
+- (void)deleteSelection;
+- (void)pasteInSelection;
+- (void)refreshCells;
+- (void)closeSubeditors;
 
-- (NSWindow*) window;
-- (void) addObject: (id)anObject;
-- (void) refreshCells;
-- (void) removeObject: (id)anObject;
-- (BOOL) activate;
-- (id) initWithObject: (id)anObject inDocument: (id<IBDocuments>)aDocument;
-- (void) close;
-- (void) closeSubeditors;
-- (BOOL) containsObject: (id)anObject;
-- (void) copySelection;
-- (void) deleteSelection;
-- (id<IBDocuments>) document;
-- (id) editedObject;
-- (id<IBEditors>) openSubeditorForObject: (id)anObject;
-- (void) orderFront;
-- (void) pasteInSelection;
-- (NSRect) rectForObject: (id)anObject;
+- (NSWindow *)window;
+- (void)addObject:(id)anObject;
+- (void)refreshCells;
+- (void)removeObject:(id)anObject;
+- (BOOL)activate;
+- (id)initWithObject:(id)anObject inDocument:(id<IBDocuments>)aDocument;
+- (void)close;
+- (void)closeSubeditors;
+- (BOOL)containsObject:(id)anObject;
+- (void)copySelection;
+- (void)deleteSelection;
+- (id<IBDocuments>)document;
+- (id)editedObject;
+- (id<IBEditors>)openSubeditorForObject:(id)anObject;
+- (void)orderFront;
+- (void)pasteInSelection;
+- (NSRect)rectForObject:(id)anObject;
 
-- (NSArray *) objects;
-- (BOOL) isOpened;
-- (NSArray *) fileTypes;
+- (NSArray *)objects;
+- (BOOL)isOpened;
+- (NSArray *)fileTypes;
 @end
 
 // private methods...
 @interface GormGenericEditor (PrivateMethods)
-- (void) willCloseDocument: (NSNotification *) aNotification;
-- (void) groupSelectionInScrollView;
-- (void) groupSelectionInSplitView;
-- (void) groupSelectionInBox;
-- (void) groupSelectionInView;
-- (void) groupSelectionInMatrix;
-- (void) ungroup;
-- (void) setEditor: (id)anEditor forDocument: (id<IBDocuments>)doc;
-- (id) changeSelection: (id)sender;
+- (void)willCloseDocument:(NSNotification *)aNotification;
+- (void)groupSelectionInScrollView;
+- (void)groupSelectionInSplitView;
+- (void)groupSelectionInBox;
+- (void)groupSelectionInView;
+- (void)groupSelectionInMatrix;
+- (void)ungroup;
+- (void)setEditor:(id)anEditor forDocument:(id<IBDocuments>)doc;
+- (id)changeSelection:(id)sender;
 @end
 
 #endif

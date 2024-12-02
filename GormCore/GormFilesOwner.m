@@ -25,7 +25,9 @@
 
 #include <AppKit/AppKit.h>
 #include <AppKit/NSNibConnector.h>
+#include <InterfaceBuilder/IBEditors.h>
 
+#include "Foundation/NSObjCRuntime.h"
 #include "GormPrivate.h"
 #include "GormCustomView.h"
 
@@ -45,16 +47,27 @@
 
 - (NSImage*) imageForViewer
 {
-  static NSImage	*image = nil;
+  NSImage *image;
+//   static NSImage *image = nil;
 
-  if (image == nil)
-    {
+//   if (image == nil)
+//     {
       NSBundle	*bundle = [NSBundle bundleForClass: [self class]];
-      NSString	*path = [bundle pathForImageResource: @"GormFilesOwner"];
+      NSString	*path;
 
-      image = [[NSImage alloc] initWithContentsOfFile: path];
-    }
-  return image;
+      if ([className isEqualToString:@"NSApplication"])
+	{
+	  path = [bundle pathForImageResource:@"NSApplication"];
+	  NSLog(@"imageForViewer: NSApplication");
+	}
+      else
+	{
+	  path = [bundle pathForImageResource:@"GormUnknown"];
+	  NSLog(@"imageForViewer: GormUnknown");
+	}
+      image = [[NSImage alloc] initWithContentsOfFile:path];
+//     }
+  return [image autorelease];
 }
 
 - (id) init
@@ -273,6 +286,7 @@
 	}
     }
   [super ok: sender];
-  [object setClassName: title];
+  [object setClassName:title];
+  [[(id<IB>) [NSApp delegate] selectionOwner] makeSelectionVisible:YES];
 }
 @end

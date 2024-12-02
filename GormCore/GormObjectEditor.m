@@ -24,6 +24,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111 USA.
  */
 
+#include "AppKit/NSButton.h"
+#include "AppKit/NSButtonCell.h"
+#include "Foundation/NSObjCRuntime.h"
 #import <AppKit/AppKit.h>
 #import <InterfaceBuilder/InterfaceBuilder.h>
 
@@ -49,7 +52,7 @@
 
   if (image == nil && [delegate isInTool] == NO)
     {
-      NSBundle	*bundle = [NSBundle bundleForClass: [self class]];
+      NSBundle *bundle = [NSBundle bundleForClass:[self class]];
       NSString *path = [bundle pathForImageResource: @"GormUnknown"]; 
       image = [[NSImage alloc] initWithContentsOfFile: path];
     }
@@ -223,6 +226,11 @@ static NSMapTable	*docMap = 0;
  */
 - (void) draggedImage: (NSImage*)i endedAt: (NSPoint)p deposited: (BOOL)f
 {
+  NSLog(@"Dragging ended and deposited: %@", f ? @"YES" : @"NO");
+  if (f == NO)
+    {
+      [self makeSelectionVisible:YES];
+    }
 }
 
 - (NSDragOperation) draggingEntered: (id<NSDraggingInfo>)sender
@@ -284,29 +292,30 @@ static NSMapTable	*docMap = 0;
  * Used for autoscrolling when you connect IBActions.
  * FIXME: Maybye there is a better way to do it.
 */
-- (void)draggingExited:(id < NSDraggingInfo >)sender
+- (void)draggingExited:(id<NSDraggingInfo>)sender
 {
-    if (dragType == GormLinkPboardType)
-      {
-	NSRect documentVisibleRect;
-	NSRect documentRect;
-	NSPoint	loc = [sender draggingLocation];
+  if (dragType == GormLinkPboardType)
+    {
+      NSRect  documentVisibleRect;
+      NSRect  documentRect;
+      NSPoint loc = [sender draggingLocation];
 
-	loc = [self convertPoint:loc fromView:nil];
-	documentVisibleRect = [(NSClipView *)[self superview] documentVisibleRect];
-	documentRect = [(NSClipView *)[self superview] documentRect];
-	
-	/* Down */
-	if ( (loc.y >= documentVisibleRect.size.height) 
-	     && ( ! NSEqualRects(documentVisibleRect,documentRect) ) ) 
-	  {
-	    loc.x = 0;
-	    loc.y = documentRect.origin.y + [self cellSize].height;
-	    [(NSClipView*) [self superview] scrollToPoint:loc];
-	  } 
-	/* up */
-	else if ( (loc.y + 10 >= documentVisibleRect.origin.y ) 
-		  && ( ! NSEqualRects(documentVisibleRect,documentRect) ) ) 
+      loc = [self convertPoint:loc fromView:nil];
+      documentVisibleRect =
+	[(NSClipView *) [self superview] documentVisibleRect];
+      documentRect = [(NSClipView *) [self superview] documentRect];
+
+      /* Down */
+      if ((loc.y >= documentVisibleRect.size.height)
+	  && (!NSEqualRects(documentVisibleRect, documentRect)))
+	{
+	  loc.x = 0;
+	  loc.y = documentRect.origin.y + [self cellSize].height;
+	  [(NSClipView *) [self superview] scrollToPoint:loc];
+	}
+      /* up */
+      else if ((loc.y + 10 >= documentVisibleRect.origin.y)
+	       && (!NSEqualRects(documentVisibleRect, documentRect))) 
 	{
 	  loc.x = 0;
 	  loc.y = documentRect.origin.y - [self cellSize].height; 
@@ -319,10 +328,6 @@ static NSMapTable	*docMap = 0;
 - (NSDragOperation) draggingSourceOperationMaskForLocal: (BOOL)flag
 {
   return NSDragOperationLink;
-}
-
-- (void) drawSelection
-{
 }
 
 - (void) handleNotification: (NSNotification*)aNotification
@@ -341,7 +346,7 @@ static NSMapTable	*docMap = 0;
  */
 - (id) initWithObject: (id)anObject inDocument: (id<IBDocuments>)aDocument
 {
-  id	old = NSMapGet(docMap, (void*)aDocument);
+  id old = NSMapGet(docMap, (void *) aDocument);
 
   if (old != nil)
     {
@@ -354,55 +359,35 @@ static NSMapTable	*docMap = 0;
   self = [super initWithObject: anObject inDocument: aDocument];
   if (self != nil)
     {
-      NSButtonCell	*proto;
-      NSColor		*color = [NSColor colorWithCalibratedRed:0.850980
-						   green:0.737255
-						    blue:0.576471
-						   alpha:1.0];
+      NSColor *color = [NSColor colorWithCalibratedRed:0.850980
+						 green:0.737255
+						  blue:0.576471
+						 alpha:1.0];
 
-      document = aDocument;
-      
-      [self registerForDraggedTypes:[NSArray arrayWithObject:GormLinkPboardType]];
-      [self setAutosizesCells: NO];
-      [self setCellSize: defaultCellSize()];
-      [self setIntercellSpacing: NSMakeSize(8,8)];
-      [self setAutoresizingMask: NSViewMinYMargin|NSViewWidthSizable];
-      [self setMode: NSRadioModeMatrix];
-      /*
-       * Send mouse click actions to self, so we can handle selection.
-       */
+      [self setBackgroundColor: color];
+      [self
+	registerForDraggedTypes:[NSArray arrayWithObject:GormLinkPboardType]];
+      [self setAutoresizingMask:NSViewMinYMargin | NSViewWidthSizable];
+      // Send mouse click actions to self, so we can handle selection.
       [self setAction: @selector(changeSelection:)];
       [self setDoubleAction: @selector(raiseSelection:)];
       [self setTarget: self];
 
-      // set the background color.
-      [self setBackgroundColor: color];
-
       objects = [[NSMutableArray alloc] init];
-      proto = [[NSButtonCell alloc] init];
-      [proto setBordered: NO];
-      [proto setAlignment: NSCenterTextAlignment];
-      [proto setImagePosition: NSImageAbove];
-      [proto setSelectable: NO];
-      [proto setEditable: NO];
-      [self setPrototype: proto];
-      RELEASE(proto);
-      [self setEditor: self
-	    forDocument: aDocument];
-      [self addObject: anObject];
+      [self setEditor:self forDocument:aDocument];
 
       // set up the notification...
       [[NSNotificationCenter defaultCenter]
-	addObserver: self
-	selector: @selector(handleNotification:)
-	name: GormResizeCellNotification
-	object: nil];
+	addObserver:self
+	   selector:@selector(handleNotification:)
+	       name:GormResizeCellNotification
+	     object:nil];
 
       [[NSNotificationCenter defaultCenter]
-	addObserver: self
-	selector: @selector(handleNotification:)
-	name: IBResourceManagerRegistryDidChangeNotification
-	object: nil];
+	addObserver:self
+	   selector:@selector(handleNotification:)
+	       name:IBResourceManagerRegistryDidChangeNotification
+	     object:nil];
     }
   return self;
 }
@@ -428,7 +413,8 @@ static NSMapTable	*docMap = 0;
       int	r = pos / [self numberOfColumns];
       int	c = pos % [self numberOfColumns];
 
-      [self selectCellAtRow: r column: c];
+      [self selectCellAtRow:r column:c];
+      [[self cellAtRow:r column:c] setImage:[selected imageForViewer]];
     }
   else
     {
@@ -440,51 +426,41 @@ static NSMapTable	*docMap = 0;
 
 - (void) mouseDown: (NSEvent*)theEvent
 {
+  NSLog(@"ObjectEditor mouseDown:");
+
+  [super mouseDown:theEvent];
+
   if ([theEvent modifierFlags] & NSControlKeyMask)
     {
-      NSPoint	loc = [theEvent locationInWindow];
-      NSString	*name;
-      NSInteger	r = 0, c = 0;
-      int	pos = 0;
-      id	obj = nil;
+      NSPoint	loc = [self convertPoint:[theEvent locationInWindow]
+				fromView:nil];
+      NSString *name = [document nameForObject:selected];
+      if ([name isEqualToString:@"NSFirst"] == NO && name != nil)
+	{
+	  NSPasteboard *pb;
 
-      loc = [self convertPoint: loc fromView: nil];
-      [self getRow: &r column: &c forPoint: loc];
-      pos = r * [self numberOfColumns] + c;
-      if (pos >= 0 && pos < [objects count])
-	{
-	  obj = [objects objectAtIndex: pos];
-	}
-      if (obj != nil && obj != selected)
-	{
-	  [self selectObjects: [NSArray arrayWithObject: obj]];
-	  [self makeSelectionVisible: YES];
-	}
-      name = [document nameForObject: obj];
-      if ([name isEqualToString: @"NSFirst"] == NO && name != nil)
-	{
-	  NSPasteboard	*pb;
-
-	  pb = [NSPasteboard pasteboardWithName: NSDragPboard];
-	  [pb declareTypes: [NSArray arrayWithObject: GormLinkPboardType]
-		     owner: self];
-	  [pb setString: name forType: GormLinkPboardType];
-	  [[NSApp delegate] displayConnectionBetween: obj and: nil];
+	  pb = [NSPasteboard pasteboardWithName:NSDragPboard];
+	  [pb declareTypes:[NSArray arrayWithObject:GormLinkPboardType]
+		     owner:self];
+	  [pb setString:name forType:GormLinkPboardType];
+	  [[NSApp delegate] displayConnectionBetween:selected and:nil];
 	  [[NSApp delegate] startConnecting];
 
-	  [self dragImage: [[NSApp delegate] linkImage]
-		       at: loc
-		   offset: NSZeroSize
-		    event: theEvent
-	       pasteboard: pb
-		   source: self
-		slideBack: YES];
-	  [self makeSelectionVisible: YES];
+	  [self dragImage:[[NSApp delegate] linkImage]
+		       at:loc
+		   offset:NSZeroSize
+		    event:theEvent
+	       pasteboard:pb
+		   source:self
+		slideBack:YES];
 	  return;
 	}
     }
-
-  [super mouseDown: theEvent];
+  else
+    {
+      [[NSApp delegate] displayConnectionBetween:nil and:nil];
+      [self makeSelectionVisible:YES];
+    }
 }
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)sender

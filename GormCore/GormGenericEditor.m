@@ -24,6 +24,99 @@
  */
 
 #include "GormGenericEditor.h"
+#include "Foundation/NSGeometry.h"
+#include "GormFunctions.h"
+
+@interface GormButtonCell : NSButtonCell
+@end
+@implementation GormButtonCell
+
+- (instancetype)init
+{
+  [super init];
+  [self setBordered:NO];
+  [self setSelectable:YES];
+  [self setEditable:NO];
+  [self setAlignment:NSCenterTextAlignment];
+  [self setImagePosition:NSImageAbove];
+
+  [self setShowsStateBy:NSChangeGrayCellMask];
+  [self setHighlightsBy:NSChangeGrayCellMask];
+  [self setRefusesFirstResponder:YES];
+
+  return self;
+}
+
+- (void)drawHighlightAtRect:(NSRect)cellFrame inView:(NSView *)controlView
+{
+  NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+  NSString *path = [bundle pathForImageResource:@"highlight"];
+  NSImage  *highlight = [[NSImage alloc] initWithContentsOfFile:path];
+  NSPoint offset;
+  NSRect  rect;
+  NSSize  size = [highlight size];
+
+  /* Calculate an offset from the cellFrame origin */
+  offset = NSMakePoint((NSWidth(cellFrame) - size.width) / 2.0,
+		       (NSHeight(cellFrame) - size.height) / 2.0);
+
+  rect = NSMakeRect(cellFrame.origin.x + offset.x,
+		    cellFrame.origin.y + offset.y, size.width, size.height);
+
+  /* Pixel-align */
+  if (nil != controlView)
+    {
+      rect = [controlView centerScanRect:rect];
+    }
+
+  NSLog(@"highlight: %@", highlight);
+  [highlight drawInRect:rect
+	       fromRect:NSZeroRect
+	      operation:NSCompositeSourceOver
+	       fraction:1.0
+	 respectFlipped:YES
+		  hints:nil];
+}
+
+- (void)drawImage:(NSImage *)imageToDisplay
+	withFrame:(NSRect)cellFrame
+	   inView:(NSView *)controlView
+{
+//   NSLog(@"GormButonCell: drawImage");
+  if (imageToDisplay != nil)
+    {
+      NSPoint offset;
+      NSRect  rect;
+      NSSize  size = [imageToDisplay size];
+
+      /* Calculate an offset from the cellFrame origin */
+      offset = NSMakePoint((NSWidth(cellFrame) - size.width) / 2.0,
+                           (NSHeight(cellFrame) - size.height) / 2.0);
+
+      rect = NSMakeRect(cellFrame.origin.x + offset.x,
+			cellFrame.origin.y + offset.y, size.width, size.height);
+
+      /* Pixel-align */
+      if (nil != controlView)
+	{
+	  rect = [controlView centerScanRect:rect];
+	}
+
+      /* Draw the image */
+      if (_cell.is_highlighted || _cell.state)
+	{
+	  [self drawHighlightAtRect:cellFrame inView:controlView];
+	}
+      [imageToDisplay drawInRect:rect
+			fromRect:NSZeroRect
+		       operation:NSCompositeSourceOver
+			fraction:1.0
+		  respectFlipped:YES
+			   hints:nil];
+    }
+}
+
+@end
 
 @implementation	GormGenericEditor
 
@@ -75,28 +168,26 @@
 
 - (void) mouseDown: (NSEvent*)theEvent
 {
-  if ([theEvent modifierFlags] & NSControlKeyMask)
+  NSPoint   loc = [theEvent locationInWindow];
+  NSInteger r = 0, c = 0;
+  int	    pos = 0;
+  id	    obj = nil;
+
+  loc = [self convertPoint:loc fromView:nil];
+  [self getRow:&r column:&c forPoint:loc];
+  pos = r * [self numberOfColumns] + c;
+  if (pos >= 0 && pos < [objects count])
     {
-      NSPoint	loc = [theEvent locationInWindow];
-      NSInteger	r = 0, c = 0;
-      int	pos = 0;
-      id	obj = nil;
-
-      loc = [self convertPoint: loc fromView: nil];
-      [self getRow: &r column: &c forPoint: loc];
-      pos = r * [self numberOfColumns] + c;
-      if (pos >= 0 && pos < [objects count])
-	{
-	  obj = [objects objectAtIndex: pos];
-	}
-      if (obj != nil && obj != selected)
-	{
-	  [self selectObjects: [NSArray arrayWithObject: obj]];
-	  [self makeSelectionVisible: YES];
-	}
+      obj = [objects objectAtIndex:pos];
     }
-
-  [super mouseDown: theEvent];
+  if (obj != nil && obj != selected)
+    {
+      [self selectObjects:[NSArray arrayWithObject:obj]];
+    }
+  else
+    {
+      [super mouseDown:theEvent];
+    }
 }
 
 
@@ -150,20 +241,36 @@
 
 - (id) initWithObject: (id)anObject inDocument: (id<IBDocuments>)aDocument
 {
-  if((self = [super init]) != nil)
+  if ((self = [super init]) != nil)
     {
+      NSButtonCell *proto;
+
       /* don't retain the document... */
       document = aDocument;
       closed = NO;
       activated = NO;
-      resourceManager = nil;      
+      resourceManager = nil;
+
+      proto = [GormButtonCell new];
+      [self setPrototype: proto];
+      RELEASE(proto);
+      [self setAutosizesCells:NO];
+      [self setCellSize: defaultCellSize()];
+      [self setIntercellSpacing: NSMakeSize(8,8)];
+      [self setMode:NSRadioModeMatrix];
+
+      objects = [[NSMutableArray alloc] init];
+      if (anObject != nil)
+	{
+	  [self addObject:anObject];
+	}
+
       /* since we don't retain the document handle its close notifications */
       [[NSNotificationCenter defaultCenter]
-	addObserver: self
-	selector: @selector(willCloseDocument:)
-	name: IBWillCloseDocumentNotification
-	object: document];
-	  
+	addObserver:self
+	   selector:@selector(willCloseDocument:)
+	       name:IBWillCloseDocumentNotification
+	     object:document];
     }
   return self;
 }
@@ -173,6 +280,7 @@
   return NO;
 }
 
+// IBEditor protocol
 - (void) makeSelectionVisible: (BOOL)flag
 {
 }
@@ -272,11 +380,18 @@
   int		rows = 0;
   int		width = 0;
 
-  if ([self superview])
-    width = [[self superview] bounds].size.width;
-  while (width >= 72)
+  NSLog(@"GormGenericEditor-%@ refreshCells: %@", [self className],
+	NSStringFromRect([self bounds]));
+
+  if ([self superview] == nil)
     {
-      width -= (72 + 8);
+      return;
+    }
+  
+  width = [[self superview] bounds].size.width;
+  while (width >= _cellSize.width)
+    {
+      width -= (_cellSize.width + _intercell.width);
       cols++;
     }
   if (cols == 0)
@@ -297,8 +412,6 @@
 
       [but setImage: [obj imageForViewer]];
       [but setTitle: [document nameForObject: obj]];
-      [but setShowsStateBy: NSChangeGrayCellMask];
-      [but setHighlightsBy: NSChangeGrayCellMask];
     }
   while (index < rows * cols)
     {
@@ -310,9 +423,7 @@
       [but setHighlightsBy: NSNoCellMask];
       index++;
     }
-  [self setIntercellSpacing: NSMakeSize(8,8)];
   [self sizeToCells];
-  [self setNeedsDisplay: YES];
 }
 
 - (void) removeObject: (id)anObject
